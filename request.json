@@ -1,0 +1,7 @@
+{
+    "requestType" : "install",
+    "installRequest" : {
+        "installType" : "date",
+        "installArgs" : [ "2021/01/01" ]
+    }
+}
