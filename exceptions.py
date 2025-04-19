@@ -1,5 +1,11 @@
 import logging
 
+class SchemaBuildError(Exception):
+    def __init__(self, message, original_exception=None):
+        super().__init__(message)
+        self.original_exception = original_exception
+
+
 class FetchError(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -9,28 +15,23 @@ class ArgsError(Exception):
     """Either arguments are wrong, or break internal rules"""
     def __init__(self, message):
         super().__init__(message)
-        self.message = message
 
 class FetchMethodError(Exception):
     """Bad fetch method"""
     def __init__(self, message):
         super().__init__(message)
-        self.message = message
 
 class UnsupportedFeatureError(Exception):
     def __init__(self, message):
         super().__init__(message)
-        self.message = message
 
 class FetcherParseError(Exception):
     def __init__(self, message):
         super().__init__(message)
-        self.message = message
 
 class UnimplementedError(Exception):
     def __init__(self, message):
         super().__init__(message)
-        self.message = message
 
 
 def logAndRaise(exception, message):
