@@ -1,12 +1,10 @@
 import requests
 import datetime
 import json
-import fileinput
-from bs4 import BeautifulSoup
+from exceptions import UnsupportedFeatureError, FetcherParseError, UnimplementedError, ArgsError, FetchMethodError
+from constants import DATE_MINIMUM, PLUGIN_NAME, VERSION
 
-VERSION = "0.1"
-PLUGIN_NAME = "SeattleTimesNYTPzzl"
-DATE_MINIMUM = datetime.datetime(2016, 1, 1).date()
+from exceptions import logAndRaise
 
 # request types [ Date ]
 # request type restrictions
@@ -39,20 +37,41 @@ DATE_MINIMUM = datetime.datetime(2016, 1, 1).date()
 #  https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date=250404
 
 
-class UnsupportedFeatureError(Exception):
-    pass
+def fetch(fetch_request_body):
+    """
+    Raises:
+        FetcherParseError:
+        FetchMethodError:
+        UnsupportedFeatureError:
+        ArgsError:
+    """
+    method = fetch_request_body["method"]
+    match method:
+        case "date":
+            _fetch_by_date(*fetch_request_body["args"])
+            pass
+        case "today":
+            logAndRaise(UnimplementedError,
+                        " fetch method today is unimplemented")
+        case _:
+            logAndRaise(FetchMethodError,
+                        f" fetch method {method} is unimplemented")
 
 
-class ParseError(Exception):
-    pass
+def _fetch_by_date(dateString):
 
-
-def install_by_date(date: "datetime.date"):
+    fmt = "%Y/%m/%d"
+    try:
+        date = datetime.datetime.strptime(dateString, fmt).date()
+    except ValueError:
+        logAndRaise(ArgsError, f"Unable to parse date format {dateString}")
 
     if date < DATE_MINIMUM:
-        raise ValueError(f"date exceeds minimum date {str(DATE_MINIMUM.date)}")
+        logAndRaise(
+            ArgsError, f"date {date} exceeds minimum date {str(DATE_MINIMUM.date)}")
     if date > datetime.datetime.now().date():
-        raise ValueError(f"date exceeds current date")
+        logAndRaise(ArgsError, f"date {date} exceeds current date")
+
     baseUrl = 'https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date='
     url = baseUrl + date.strftime("%y%m%d")
 
@@ -60,11 +79,16 @@ def install_by_date(date: "datetime.date"):
     response.raise_for_status()
     text = response.content.decode('utf-8', errors='ignore')
 
-    installData = parse(text)
+    installData = _parse_puzzle_file(text)
     return json.dumps(installData)
 
 
-def parse(text):
+def _parse_puzzle_file(text):
+    """
+    Raises:
+        FetcherParseError:
+        UnsupportedFeatureError:
+    """
 
     lines = text.split('\n')
 
@@ -82,7 +106,8 @@ def parse(text):
     # Integrity Check "ARCHIVE" Line
     ###################################
     if lines[0] != "ARCHIVE":
-        raise ParseError("format appears off, expected ARCHIVE as first line")
+        logAndRaise(FetcherParseError,
+                    "format appears off, expected ARCHIVE as first line")
 
     ###################################
     # Puzzle Data
@@ -108,17 +133,17 @@ def parse(text):
     while (lines[ln] != ""):
         line = lines[ln]
         if "," in line:
-            raise UnsupportedFeatureError(
-                "Solution geometry contains \",\" characters")
+            logAndRaise(UnsupportedFeatureError,
+                        "Solution geometry contains \",\" characters")
         elif "." in line:
-            raise UnsupportedFeatureError(
-                "Solution geometry contains \".\" characters")
+            logAndRaise(UnsupportedFeatureError,
+                        "Solution geometry contains \".\" characters")
         elif "^" in line:
-            raise UnsupportedFeatureError(
-                "Solution geometry contains \"^\" characters")
+            logAndRaise(UnsupportedFeatureError,
+                        "Solution geometry contains \"^\" characters")
         elif len(line) != columns:
-            raise UnsupportedFeatureError(
-                f"Solution geometry contradicts row length : line length {len(line)} columns {columns}")
+            logAndRaise(UnsupportedFeatureError,
+                        f"Solution geometry contradicts row length : line length {len(line)} columns {columns}")
 
         for i, c in enumerate(line):
             solution[ln-16][i] = c
@@ -135,8 +160,8 @@ def parse(text):
         ln += 1
     # Integrity Check AC matches actual
     if len(acrossClues) != acrossClueCount:
-        raise ParseError(
-            f"Across Clues Count Integrity Check Failed : expected {acrossClueCount} got {len(acrossClues)}")
+        logAndRaise(FetcherParseError,
+                    f"Across Clues Count Integrity Check Failed : expected {acrossClueCount} got {len(acrossClues)}")
 
     ###################################
     # Extract Down Clues
@@ -149,8 +174,8 @@ def parse(text):
         ln += 1
     # Integrity Check DC matches actual
     if len(downClues) != downClueCount:
-        raise ParseError(
-            f"Down Clues Count Integrity Check Failed : expected {downClueCount} got {len(downClues)}")
+        logAndRaise(FetcherParseError,
+                    f"Down Clues Count Integrity Check Failed : expected {downClueCount} got {len(downClues)}")
 
     ###################################
     # Reconstitute into standard format
@@ -217,81 +242,3 @@ def parse(text):
     }
 
     return puzzleData
-
-###############################################################################
-# Plugin Command Schema
-
-
-# install
-"""
-{
-    "requestType" : "install",
-    "installlRequest" : {
-        "installType" : ( None , ... )
-        "installArgs" : []
-    }
-}
-"""
-
-# spec
-{
-    "requestType": "spec"
-}
-
-# Plugin Response Schema
-
-# install fail
-"""
-{
-    "responseType" : "install"
-    "success" : False
-    "reason" : <String>
-}
-"""
-
-# install success
-"""
-{
-    "responseType" : "install"
-    "success" : True
-    "data" : {}
-}
-"""
-
-# spec
-"""
-{
-    "responseType" : "spec"
-    "installCapabilities" : [
-        {
-            "name" : "date",
-            "requiredArgs" : [ { "name" : "date" , "position" : 0 } ]
-            "info" : "installs the puzzle released on the given date"
-        }
-
-    ]
-}
-"""
-###############################################################################
-
-lines = []
-for line in fileinput.input():
-    lines.append(line)
-data = "".join(lines)
-
-jsonData = json.loads(data)
-
-if jsonData["requestType"] == "install":
-    installData = jsonData["installRequest"]
-    if installData["installType"] == "date":
-        fmt = "%Y/%m/%d"
-        date = datetime.datetime.strptime(
-            jsonData["installRequest"]["installArgs"][0], fmt)
-        #print(f"installing {str(date.date())}")
-        jsonData = install_by_date(date.date())
-        print(jsonData)
-
-
-# fmt = "%Y/%m/%d"
-# date = datetime.datetime.strptime(args.date, fmt)
-# print(f"installing {str(date.date())}")

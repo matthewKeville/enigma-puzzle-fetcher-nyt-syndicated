@@ -1,0 +1,4 @@
+2025-04-18 21:10:53,948 [ERROR]  fetch method bullshit is unimplemented
+2025-04-18 21:10:53,948 [CRITICAL] Critical Error : Unanticipated FetchMethodError  fetch method bullshit is unimplemented
+2025-04-18 21:11:57,673 [ERROR]  fetch method bullshit is unimplemented
+2025-04-18 21:11:57,673 [INFO] building error response
