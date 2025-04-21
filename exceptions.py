@@ -6,12 +6,14 @@ import logging
 class UnimplementedError(Exception):
     def __init__(self, message):
         super().__init__(message)
+        self.message = message
 
 
 class SchemaBuildError(Exception):
     def __init__(self, message, original_exception=None):
         super().__init__(message)
         self.original_exception = original_exception
+        self.message = message
 
 
 # Fetch

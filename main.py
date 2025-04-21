@@ -16,7 +16,7 @@ from exceptions import (
 from fetcher import fetch
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
         logging.FileHandler("log.log"),        # Log to file
@@ -41,9 +41,6 @@ def read_stdin_as_json():
 def processRequest(request):
     match request["requestType"]:
         case "fetch":
-            # TODO handdle fetch level errors and figure out flow for
-            # ErrorResonse creation, we want the exception to flow up
-            # here to insert it into the errorResponse
             try:
                 return fetch(request["body"])
             except FetchError as fe:
@@ -112,6 +109,12 @@ except Exception as e:
     msg = f"Critical Error : Unanticipated {e.__class__.__name__} {e}"
     logging.critical(msg)
     response = generateErrorResponse("CriticalFailure", msg)
+
+if response == None:
+    msg = f"Critical Error : response is None"
+    logging.critical(msg)
+    response = generateErrorResponse("CriticalFailure", msg)
+
 
 print(json.dumps(response))
 exit(0)

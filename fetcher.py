@@ -1,6 +1,7 @@
 import requests
 import datetime
 import json
+import logging
 from exceptions import ( 
     UnimplementedError,
     FetchError,
@@ -46,6 +47,10 @@ from exceptions import logAndRaise
 
 def fetch(fetch_request_body):
     """
+    Args:
+        fetch-request-body (dictionary) : Compliant to scheams/fetch-request-body-schema.json
+    Returns:
+        fetch-response-body-schema (dictionary)  : Compliant to schemas/fetch-response-body-schema.json
     Raises:
         UnimplementedError,
         FetchError,
@@ -54,11 +59,12 @@ def fetch(fetch_request_body):
         FetchParsingError,
         FetchUnsupportedError,
     """
+    logging.debug("in fetch") # REMOVE ME
     method = fetch_request_body["method"]
+    puzzle_data = None
     match method:
         case "date":
-            _fetch_by_date(*fetch_request_body["args"])
-            pass
+            puzzle_data = _fetch_by_date(*fetch_request_body["args"])
         case "today":
             logAndRaise(UnimplementedError,
                         " fetch method today is unimplemented")
@@ -66,14 +72,28 @@ def fetch(fetch_request_body):
             logAndRaise(FetchMethodError,
                         f" fetch method {method} is invalid")
 
+    response = {
+        "body" : {
+            "puzzleData" : puzzle_data
+        },
+        "success": True,
+    }
+    return response
+
+
 
 def _fetch_by_date(dateString):
     """
+    Args:
+        dateString (string) : the target crossword release date "%Y/%m/%d"
+    Returns:
+        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
     Raises:
         FetchArgsError,
         FetchParsingError,
         FetchUnsupportedError,
     """
+    logging.debug("in _fetch_by_date") # REMOVE ME
 
     fmt = "%Y/%m/%d"
     try:
@@ -86,6 +106,8 @@ def _fetch_by_date(dateString):
     if date > datetime.datetime.now().date():
         logAndRaise(FetchArgsError, f"date {date} exceeds current date")
 
+    logging.debug("in _fetch_by_date passed args evaluation") # REMOVE ME
+
     baseUrl = 'https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date='
     url = baseUrl + date.strftime("%y%m%d")
 
@@ -93,12 +115,19 @@ def _fetch_by_date(dateString):
     response.raise_for_status()
     text = response.content.decode('utf-8', errors='ignore')
 
+    logging.debug("in _fetch_by_date before parsing") # REMOVE ME
+
     installData = _parse_puzzle_file(text)
+    logging.debug("in _fetch_by_date after parsing") # REMOVE ME
     return json.dumps(installData)
 
 
 def _parse_puzzle_file(text):
     """
+    Args:
+        text (string) : text from file retrieved from nytsyn.pzzl.com endpoint
+    Returns:
+        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
     Raises:
         FetchParsingError:
         FetchUnsupportedError:
