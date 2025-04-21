@@ -46,19 +46,10 @@ def processRequest(request):
             try:
                 return fetch(request["body"])
             except FetchError as fe:
-                match fe:
-                    case FetchMethodError():
-                        return generateErrorResponse("FetchFailed", fe.message)
-                    case FetchArgsError():
-                        return generateErrorResponse("FetchFailed", fe.message)
-                    case FetchParsingError():
-                        return generateErrorResponse("FetchFailed", fe.message)
-                    case FetchUnsupportedError():
-                        return generateErrorResponse("FetchFailed", fe.message)
-                    case FetchError():
-                        return generateErrorResponse("FetchFailed", fe.message)
-                    case _:
-                        raise fe
+                # In the future, depending on the Plugin Spec, I may want to 
+                # inspect the specific error to communicate the issue back
+                # to the client. Ex. Args errors
+                return generateErrorResponse("FetchFailed", fe.message)
 
         case "methods":
             return methods(request["body"])

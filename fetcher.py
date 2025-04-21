@@ -7,6 +7,7 @@ from exceptions import (
     FetchError,
     FetchArgsError,
     FetchMethodError,
+    FetchNetworkError,
     FetchParsingError,
     FetchUnsupportedError,
 )
@@ -81,8 +82,7 @@ def fetch(fetch_request_body):
         case "date":
             puzzle_data = _fetch_by_date(*fetch_request_body["args"])
         case "today":
-            logAndRaise(UnimplementedError,
-                        " fetch method today is unimplemented")
+            puzzle_data = _fetch_by_today(*fetch_request_body["args"])
         case _:
             logAndRaise(FetchMethodError,
                         f" fetch method {method} is invalid")
@@ -101,9 +101,9 @@ def fetch(fetch_request_body):
     description="Fetches the NYT Syndicated crossword for a given date.",
     arguments=[
         {
-            "name" : "date",
-            "desc" : "the date release of the puzzle",
-            "constraints" : [
+            "name": "date",
+            "desc": "the date release of the puzzle",
+            "constraints": [
                 f"date must be in format {DATE_FMT}",
                 f"date must be after {DATE_MINIMUM}",
                 f"date must be before {str(datetime.datetime.now().date() + datetime.timedelta(days=1))}"
@@ -119,10 +119,10 @@ def _fetch_by_date(dateString):
         puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
     Raises:
         FetchArgsError,
+        FetchNetworkError,
         FetchParsingError,
         FetchUnsupportedError,
     """
-    logging.debug("in _fetch_by_date")  # REMOVE ME
 
     try:
         date = datetime.datetime.strptime(dateString, DATE_FMT).date()
@@ -136,20 +136,47 @@ def _fetch_by_date(dateString):
     if date > datetime.datetime.now().date():
         logAndRaise(FetchArgsError, f"date {date} exceeds current date")
 
-    logging.debug("in _fetch_by_date passed args evaluation")  # REMOVE ME
-
-    baseUrl = 'https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date='
-    url = baseUrl + date.strftime("%y%m%d")
-
-    response = requests.get(url)
-    response.raise_for_status()
-    text = response.content.decode('utf-8', errors='ignore')
-
-    logging.debug("in _fetch_by_date before parsing")  # REMOVE ME
-
+    text = _get_puzzle_by_date(date)
     installData = _parse_puzzle_file(text)
-    logging.debug("in _fetch_by_date after parsing")  # REMOVE ME
     return json.dumps(installData)
+
+
+@fetch_method(
+    name="today",
+    description="Fetches the NYT Syndicated crossword for today.",
+    arguments=[]
+)
+def _fetch_by_today():
+    """
+    Returns:
+        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
+    Raises:
+        FetchNetworkError,
+    """
+    text = _get_puzzle_by_date(datetime.date.today())
+    installData = _parse_puzzle_file(text)
+    return json.dumps(installData)
+
+
+def _get_puzzle_by_date(date):
+    """
+    Args:
+        text (string) : text from file retrieved from nytsyn.pzzl.com endpoint
+    Returns:
+        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
+    Raises:
+        FetchNetworkError:
+    """
+    try:
+        baseUrl = 'https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date='
+        url = baseUrl + date.strftime("%y%m%d")
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.exceptions.Timeout as e:
+        logAndRaise(FetchNetworkError, f"Timeout trying to GET {url} : {str(e)} ")
+    except requests.exceptions.RequestException as e:
+        logAndRaise(FetchNetworkError, f"Failed to GET {url} : {str(e)}")
+    return response.content.decode('utf-8', errors='ignore')
 
 
 def _parse_puzzle_file(text):

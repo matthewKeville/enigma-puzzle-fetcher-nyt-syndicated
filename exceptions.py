@@ -40,6 +40,11 @@ class FetchMethodError(FetchError):
         super().__init__(message)
         self.message = message
 
+class FetchNetworkError(FetchError):
+    """Unable to access remote resources"""
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
 
 class FetchParsingError(FetchError):
     """Unable to parse crossword data"""
