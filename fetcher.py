@@ -2,7 +2,7 @@ import requests
 import datetime
 import json
 import logging
-from exceptions import ( 
+from exceptions import (
     UnimplementedError,
     FetchError,
     FetchArgsError,
@@ -13,6 +13,8 @@ from exceptions import (
 from constants import DATE_MINIMUM, PLUGIN_NAME, VERSION
 
 from exceptions import logAndRaise
+
+DATE_FMT = "%Y/%m/%d"
 
 # request types [ Date ]
 # request type restrictions
@@ -44,6 +46,19 @@ from exceptions import logAndRaise
 #  Known Well Behaved
 #  https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date=250404
 
+# construct a decorator to inspect the available fetch methods elsewhere
+FETCH_METHODS = {}
+
+
+def fetch_method(name: str, description: str, arguments: dict):
+    def decorator(func):
+        FETCH_METHODS[name] = {
+            "description": description,
+            "arguments": arguments,
+        }
+        return func
+    return decorator
+
 
 def fetch(fetch_request_body):
     """
@@ -59,7 +74,7 @@ def fetch(fetch_request_body):
         FetchParsingError,
         FetchUnsupportedError,
     """
-    logging.debug("in fetch") # REMOVE ME
+    logging.debug("in fetch")  # REMOVE ME
     method = fetch_request_body["method"]
     puzzle_data = None
     match method:
@@ -73,15 +88,29 @@ def fetch(fetch_request_body):
                         f" fetch method {method} is invalid")
 
     response = {
-        "body" : {
-            "puzzleData" : puzzle_data
+        "body": {
+            "puzzleData": puzzle_data
         },
         "success": True,
     }
     return response
 
 
-
+@fetch_method(
+    name="date",
+    description="Fetches the NYT Syndicated crossword for a given date.",
+    arguments=[
+        {
+            "name" : "date",
+            "desc" : "the date release of the puzzle",
+            "constraints" : [
+                f"date must be in format {DATE_FMT}",
+                f"date must be after {DATE_MINIMUM}",
+                f"date must be before {str(datetime.datetime.now().date() + datetime.timedelta(days=1))}"
+            ]
+        }
+    ]
+)
 def _fetch_by_date(dateString):
     """
     Args:
@@ -93,20 +122,21 @@ def _fetch_by_date(dateString):
         FetchParsingError,
         FetchUnsupportedError,
     """
-    logging.debug("in _fetch_by_date") # REMOVE ME
+    logging.debug("in _fetch_by_date")  # REMOVE ME
 
-    fmt = "%Y/%m/%d"
     try:
-        date = datetime.datetime.strptime(dateString, fmt).date()
+        date = datetime.datetime.strptime(dateString, DATE_FMT).date()
     except ValueError:
-        logAndRaise(FetchArgsError, f"Unable to parse date format {dateString}")
+        logAndRaise(FetchArgsError,
+                    f"Unable to parse date format {dateString}")
 
     if date < DATE_MINIMUM:
-        logAndRaise(FetchArgsError, f"date {date} exceeds minimum date {str(DATE_MINIMUM.date)}")
+        logAndRaise(
+            FetchArgsError, f"date {date} exceeds minimum date {str(DATE_MINIMUM.date)}")
     if date > datetime.datetime.now().date():
         logAndRaise(FetchArgsError, f"date {date} exceeds current date")
 
-    logging.debug("in _fetch_by_date passed args evaluation") # REMOVE ME
+    logging.debug("in _fetch_by_date passed args evaluation")  # REMOVE ME
 
     baseUrl = 'https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date='
     url = baseUrl + date.strftime("%y%m%d")
@@ -115,10 +145,10 @@ def _fetch_by_date(dateString):
     response.raise_for_status()
     text = response.content.decode('utf-8', errors='ignore')
 
-    logging.debug("in _fetch_by_date before parsing") # REMOVE ME
+    logging.debug("in _fetch_by_date before parsing")  # REMOVE ME
 
     installData = _parse_puzzle_file(text)
-    logging.debug("in _fetch_by_date after parsing") # REMOVE ME
+    logging.debug("in _fetch_by_date after parsing")  # REMOVE ME
     return json.dumps(installData)
 
 
