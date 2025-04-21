@@ -1,7 +1,14 @@
 import requests
 import datetime
 import json
-from exceptions import UnsupportedFeatureError, FetcherParseError, UnimplementedError, ArgsError, FetchMethodError
+from exceptions import ( 
+    UnimplementedError,
+    FetchError,
+    FetchArgsError,
+    FetchMethodError,
+    FetchParsingError,
+    FetchUnsupportedError,
+)
 from constants import DATE_MINIMUM, PLUGIN_NAME, VERSION
 
 from exceptions import logAndRaise
@@ -40,10 +47,12 @@ from exceptions import logAndRaise
 def fetch(fetch_request_body):
     """
     Raises:
-        FetcherParseError:
-        FetchMethodError:
-        UnsupportedFeatureError:
-        ArgsError:
+        UnimplementedError,
+        FetchError,
+        FetchMethodError,
+        FetchArgsError,
+        FetchParsingError,
+        FetchUnsupportedError,
     """
     method = fetch_request_body["method"]
     match method:
@@ -55,22 +64,27 @@ def fetch(fetch_request_body):
                         " fetch method today is unimplemented")
         case _:
             logAndRaise(FetchMethodError,
-                        f" fetch method {method} is unimplemented")
+                        f" fetch method {method} is invalid")
 
 
 def _fetch_by_date(dateString):
+    """
+    Raises:
+        FetchArgsError,
+        FetchParsingError,
+        FetchUnsupportedError,
+    """
 
     fmt = "%Y/%m/%d"
     try:
         date = datetime.datetime.strptime(dateString, fmt).date()
     except ValueError:
-        logAndRaise(ArgsError, f"Unable to parse date format {dateString}")
+        logAndRaise(FetchArgsError, f"Unable to parse date format {dateString}")
 
     if date < DATE_MINIMUM:
-        logAndRaise(
-            ArgsError, f"date {date} exceeds minimum date {str(DATE_MINIMUM.date)}")
+        logAndRaise(FetchArgsError, f"date {date} exceeds minimum date {str(DATE_MINIMUM.date)}")
     if date > datetime.datetime.now().date():
-        logAndRaise(ArgsError, f"date {date} exceeds current date")
+        logAndRaise(FetchArgsError, f"date {date} exceeds current date")
 
     baseUrl = 'https://nytsyn.pzzl.com/nytsyn-crossword-mh/nytsyncrossword?date='
     url = baseUrl + date.strftime("%y%m%d")
@@ -86,8 +100,8 @@ def _fetch_by_date(dateString):
 def _parse_puzzle_file(text):
     """
     Raises:
-        FetcherParseError:
-        UnsupportedFeatureError:
+        FetchParsingError:
+        FetchUnsupportedError:
     """
 
     lines = text.split('\n')
@@ -106,7 +120,7 @@ def _parse_puzzle_file(text):
     # Integrity Check "ARCHIVE" Line
     ###################################
     if lines[0] != "ARCHIVE":
-        logAndRaise(FetcherParseError,
+        logAndRaise(FetchParsingError,
                     "format appears off, expected ARCHIVE as first line")
 
     ###################################
@@ -133,16 +147,16 @@ def _parse_puzzle_file(text):
     while (lines[ln] != ""):
         line = lines[ln]
         if "," in line:
-            logAndRaise(UnsupportedFeatureError,
+            logAndRaise(FetchUnsupportedError,
                         "Solution geometry contains \",\" characters")
         elif "." in line:
-            logAndRaise(UnsupportedFeatureError,
+            logAndRaise(FetchUnsupportedError,
                         "Solution geometry contains \".\" characters")
         elif "^" in line:
-            logAndRaise(UnsupportedFeatureError,
+            logAndRaise(FetchUnsupportedError,
                         "Solution geometry contains \"^\" characters")
         elif len(line) != columns:
-            logAndRaise(UnsupportedFeatureError,
+            logAndRaise(FetchUnsupportedError,
                         f"Solution geometry contradicts row length : line length {len(line)} columns {columns}")
 
         for i, c in enumerate(line):
@@ -160,7 +174,7 @@ def _parse_puzzle_file(text):
         ln += 1
     # Integrity Check AC matches actual
     if len(acrossClues) != acrossClueCount:
-        logAndRaise(FetcherParseError,
+        logAndRaise(FetchParsingError,
                     f"Across Clues Count Integrity Check Failed : expected {acrossClueCount} got {len(acrossClues)}")
 
     ###################################
@@ -174,7 +188,7 @@ def _parse_puzzle_file(text):
         ln += 1
     # Integrity Check DC matches actual
     if len(downClues) != downClueCount:
-        logAndRaise(FetcherParseError,
+        logAndRaise(FetchParsingError,
                     f"Down Clues Count Integrity Check Failed : expected {downClueCount} got {len(downClues)}")
 
     ###################################

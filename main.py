@@ -6,13 +6,22 @@ from jsonschema.exceptions import ValidationError
 from exceptions import (
     logAndRaise,
     UnimplementedError,
-    FetcherParseError,
-    UnsupportedFeatureError,
-    ArgsError,
+    SchemaBuildError,
+    FetchError,
     FetchMethodError,
-    SchemaBuildError
+    FetchArgsError,
+    FetchParsingError,
+    FetchUnsupportedError,
 )
 from fetcher import fetch
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler("log.log"),        # Log to file
+    ],
+)
 
 
 def read_stdin_as_json():
@@ -26,7 +35,7 @@ def read_stdin_as_json():
             lines.append(line)
         return json.loads("".join(lines))
     except json.decoder.JSONDecodeError as e:  # Name Conflict betweens request and json
-        logAndRaise(e,"Unable to decode input as JSON")
+        logAndRaise(e, "Unable to decode input as JSON")
 
 
 def processRequest(request):
@@ -37,14 +46,20 @@ def processRequest(request):
             # here to insert it into the errorResponse
             try:
                 return fetch(request["body"])
-            except FetcherParseError as e:
-                printErrorResponseAndExit("FetchFailed", e.message)
-            except FetchMethodError as e:
-                printErrorResponseAndExit("FetchFailed", e.message)
-            except UnsupportedFeatureError as e:
-                printErrorResponseAndExit("FetchFailed", e.message)
-            except ArgsError as e:
-                printErrorResponseAndExit("InvalidArgs", e.message)
+            except FetchError as fe:
+                match fe:
+                    case FetchMethodError():
+                        return generateErrorResponse("FetchFailed", fe.message)
+                    case FetchArgsError():
+                        return generateErrorResponse("FetchFailed", fe.message)
+                    case FetchParsingError():
+                        return generateErrorResponse("FetchFailed", fe.message)
+                    case FetchUnsupportedError():
+                        return generateErrorResponse("FetchFailed", fe.message)
+                    case FetchError():
+                        return generateErrorResponse("FetchFailed", fe.message)
+                    case _:
+                        raise fe
 
         case "methods":
             logAndRaise(UnimplementedError, "methdos process unimplemented")
@@ -52,33 +67,24 @@ def processRequest(request):
             logAndRaise(UnimplementedError, "args process unimplemented")
 
 
-def printErrorResponseAndExit(code, errorMessage):
+def generateErrorResponse(code, errorMessage):
     logging.info("building error response")
     response = {
-        "error" : {
+        "error": {
             "code": code,
             "errorMessage": errorMessage
         },
-        "success" : False,
+        "success": False,
     }
-    print(json.dumps(response))
-    exit(0)
+    logging.info("error response built")
+    logging.info(response)
+    return response
 
 
+response = None
 try:
+
     from schemas import SCHEMAS, getRefResolver
-except SchemaBuildError as e:
-    printErrorResponseAndExit("CriticalFailure", f"{e}")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler("fetcher.log"),        # Log to file
-    ],
-)
-
-try:
     resolver = getRefResolver()
     validator = Draft7Validator(
         schema=SCHEMAS["schemas/request-schema.json"], resolver=resolver)
@@ -86,17 +92,26 @@ try:
     try:
         request = read_stdin_as_json()
         validator.validate(request)
-        print(processRequest(request))
-        exit(0)
+        response = processRequest(request)
     except json.decoder.JSONDecodeError as e:
-        printErrorResponseAndExit("BadRequest",
-                                  f"Input is not valid JSON {e.msg}")
+        response = generateErrorResponse(
+            "BadRequest", f"Input is not valid JSON {e.msg}")
     except ValidationError as e:
-        printErrorResponseAndExit("BadRequest",
-                                  f"Request doesn't not conform to schemas/request-body-schema.json {e.message}")
+        response = generateErrorResponse(
+            "BadRequest", f"Request doesn't conform to schemas/request-body-schema.json {e.message}")
 
-# Unrecoverable, unanticipated error
+except SchemaBuildError as e:
+    msg = f"SchemaError: {e.message}"
+    logging.critical(msg)
+    response = generateErrorResponse("CriticalFailure", msg)
+except UnimplementedError as e:
+    msg = f"UnimplementedError: {e.message}"
+    logging.critical(msg)
+    response = generateErrorResponse("CriticalFailure", msg)
 except Exception as e:
-    logging.critical(
-        f"Critical Error : Unanticipated {e.__class__.__name__} {e}")
-    exit(1)
+    msg = f"Critical Error : Unanticipated {e.__class__.__name__} {e}"
+    logging.critical(msg)
+    response = generateErrorResponse("CriticalFailure", msg)
+
+print(json.dumps(response))
+exit(0)
