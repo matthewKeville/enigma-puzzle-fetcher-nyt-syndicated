@@ -1,8 +1,8 @@
 import json
 import fileinput
 import logging
-from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError
+from jsonschema import Draft7Validator
 from exceptions import (
     logAndRaise,
     UnimplementedError,
@@ -14,6 +14,8 @@ from exceptions import (
     FetchUnsupportedError,
 )
 from fetcher import fetch
+from methods import methods
+from schemas import SCHEMAS, REGISTRY
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -59,9 +61,7 @@ def processRequest(request):
                         raise fe
 
         case "methods":
-            logAndRaise(UnimplementedError, "methdos process unimplemented")
-        case "args":
-            logAndRaise(UnimplementedError, "args process unimplemented")
+            return methods(request["body"])
 
 
 def generateErrorResponse(code, errorMessage):
@@ -80,11 +80,7 @@ def generateErrorResponse(code, errorMessage):
 
 response = None
 try:
-
-    from schemas import SCHEMAS, getRefResolver
-    resolver = getRefResolver()
-    validator = Draft7Validator(
-        schema=SCHEMAS["schemas/request-schema.json"], resolver=resolver)
+    validator = Draft7Validator(schema=SCHEMAS["schemas/request-schema.json"], registry=REGISTRY)
 
     try:
         request = read_stdin_as_json()
