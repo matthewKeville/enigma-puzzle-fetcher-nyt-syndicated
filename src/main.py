@@ -13,6 +13,7 @@ from exceptions import (
     FetchParsingError,
     FetchUnsupportedError,
 )
+from info import info
 from fetcher import fetch
 from methods import methods
 from schemas import SCHEMAS, REGISTRY
@@ -50,9 +51,10 @@ def processRequest(request):
                 # inspect the specific error to communicate the issue back
                 # to the client. Ex. Args errors
                 return generateErrorResponse("FetchFailed", fe.message)
-
         case "methods":
-            return methods(request["body"])
+            return methods()
+        case "info":
+            return info()
 
 
 def generateErrorResponse(code, errorMessage):

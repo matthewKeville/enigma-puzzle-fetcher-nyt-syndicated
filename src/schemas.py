@@ -15,7 +15,8 @@ _schema_ids = [
 
     "schemas/methods/method-schema.json",
     "schemas/methods/methods-response-body-schema.json",
-    "schemas/methods/methods-request-body-schema.json",
+
+    "schemas/info/info-response-body-schema.json",
 
     "schemas/request-schema.json",
     "schemas/response-schema.json"
