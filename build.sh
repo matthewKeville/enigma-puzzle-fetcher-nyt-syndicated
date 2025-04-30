@@ -17,7 +17,7 @@ rm requirements.txt
 
 echo "$CANONICAL_BUILD_DIR"
 cat > run.sh <<EOF
-  source "$CANONICAL_BUILD_DIR"/venv/bin/activate
+  . "$CANONICAL_BUILD_DIR"/venv/bin/activate
   python3  "$CANONICAL_BUILD_DIR"/main.py # bash subprocess inherits STDIN
   deactivate
 EOF
