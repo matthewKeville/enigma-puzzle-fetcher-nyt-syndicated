@@ -16,6 +16,7 @@ def methods():
         "body": {
             "methods": methods
         },
+        "responseType": "methods",
         "success": True,
     }
     return response

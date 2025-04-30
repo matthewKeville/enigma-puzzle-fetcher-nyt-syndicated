@@ -6,6 +6,7 @@ def info():
             "name": "nyt syndicated fetcher",
             "description": "fetches NYT syndicated puzzles through webscraping the SeattleTimes"
         },
+        "responseType": "info",
         "success": True,
     }
     return response

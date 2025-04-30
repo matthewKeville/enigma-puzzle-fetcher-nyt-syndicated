@@ -91,6 +91,7 @@ def fetch(fetch_request_body):
         "body": {
             "puzzleData": puzzle_data
         },
+        "responseType": "fetch",
         "success": True,
     }
     return response
