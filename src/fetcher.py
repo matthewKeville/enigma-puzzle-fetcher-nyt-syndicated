@@ -305,9 +305,9 @@ def _parse_puzzle_file(text):
                     "x": i,
                     "y": j,
                     "i": acrossClueCount - len(acrossClues),
-                    "Direction": "Across",
-                    "Prompt": prompt,
-                    "Answer": answer
+                    "direction": "Across",
+                    "prompt": prompt,
+                    "answer": answer
                 })
 
             # encountered start of down clue
@@ -323,16 +323,16 @@ def _parse_puzzle_file(text):
                     "x": i,
                     "y": j,
                     "i": downClueCount - len(downClues),
-                    "Direction": "Down",
-                    "Prompt": prompt,
-                    "Answer": answer
+                    "direction": "Down",
+                    "prompt": prompt,
+                    "answer": answer
                 })
 
     puzzleData = {
         "meta": {
             "plugin": PLUGIN_NAME,
             "pluginVersion": VERSION,
-            "installedDate": str(datetime.datetime.now().date())
+            "fetchDate": str(datetime.datetime.now().date())
         },
         "columns": columns,
         "rows": rows,
