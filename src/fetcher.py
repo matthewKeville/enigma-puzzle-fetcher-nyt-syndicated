@@ -103,7 +103,7 @@ def fetch(fetch_request_body):
     arguments=[
         {
             "name": "date",
-            "desc": "the date release of the puzzle",
+            "description": "the date release of the puzzle",
             "constraints": [
                 f"date must be in format {DATE_FMT}",
                 f"date must be after {DATE_MINIMUM}",
@@ -332,7 +332,7 @@ def _parse_puzzle_file(text):
         "meta": {
             "plugin": PLUGIN_NAME,
             "pluginVersion": VERSION,
-            "fetchDate": str(datetime.datetime.now().date())
+            "fetchDate": str(datetime.datetime.now())
         },
         "columns": columns,
         "rows": rows,

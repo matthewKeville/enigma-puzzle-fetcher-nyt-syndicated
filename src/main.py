@@ -16,7 +16,7 @@ from exceptions import (
 from info import info
 from fetcher import fetch
 from methods import methods
-from schemas import SCHEMAS, REGISTRY
+from schemas import REQUEST_SCHEMA,RESPONSE_SCHEMA
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -42,18 +42,19 @@ def read_stdin_as_json():
 
 
 def processRequest(request):
-    match request["requestType"]:
-        case "fetch":
-            try:
-                return fetch(request["body"])
-            except FetchError as fe:
-                # In the future, depending on the Plugin Spec, I may want to 
-                # inspect the specific error to communicate the issue back
-                # to the client. Ex. Args errors
-                return generateErrorResponse("FetchFailed", fe.message)
-        case "methods":
+    match request["Type"]:
+        case "Fetch":
+            # try:
+            #     return fetch(request["body"])
+            # except FetchError as fe:
+            #     # In the future, depending on the Plugin Spec, I may want to 
+            #     # inspect the specific error to communicate the issue back
+            #     # to the client. Ex. Args errors
+            #     return generateErrorResponse("FetchFailed", fe.message)
+            exit(0)
+        case "Methods":
             return methods()
-        case "info":
+        case "Info":
             return info()
 
 
@@ -73,7 +74,7 @@ def generateErrorResponse(code, errorMessage):
 
 response = None
 try:
-    validator = Draft7Validator(schema=SCHEMAS["schemas/request-schema.json"], registry=REGISTRY)
+    validator = Draft7Validator(schema=REQUEST_SCHEMA)
 
     try:
         request = read_stdin_as_json()
@@ -103,7 +104,6 @@ if response == None:
     msg = f"Critical Error : response is None"
     logging.critical(msg)
     response = generateErrorResponse("CriticalFailure", msg)
-
 
 print(json.dumps(response))
 exit(0)

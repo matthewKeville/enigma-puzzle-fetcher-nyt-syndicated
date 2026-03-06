@@ -1,4 +1,5 @@
 from fetcher import FETCH_METHODS
+from constants import API_VERSION
 import logging
 
 
@@ -6,17 +7,17 @@ def methods():
     methods = [
         {
             "name": name,
-            "desc": meta["description"],
-            "args": meta["arguments"]
+            "description": meta["description"],
+            "arguments": meta["arguments"]
         }
         for name, meta in FETCH_METHODS.items()
     ]
 
     response = {
-        "body": {
+        "type": "methods",
+        "apiVersion": API_VERSION,
+        "methods": {
             "methods": methods
-        },
-        "responseType": "methods",
-        "success": True,
+        }
     }
     return response

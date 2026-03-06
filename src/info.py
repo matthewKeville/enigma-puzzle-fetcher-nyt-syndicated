@@ -1,12 +1,14 @@
 import logging
+from constants import VERSION,API_VERSION
 
 def info():
     response = {
-        "body": {
+        "type": "info",
+        "apiVersion": API_VERSION,
+        "fetch": {
             "name": "nyt syndicated fetcher",
-            "description": "fetches NYT syndicated puzzles through webscraping the SeattleTimes"
+            "description": "fetches NYT syndicated puzzles through webscraping the SeattleTimes",
+            "version": VERSION
         },
-        "responseType": "info",
-        "success": True,
     }
     return response
