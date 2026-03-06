@@ -301,7 +301,7 @@ def _parse_puzzle_file(text):
                     "x": i,
                     "y": j,
                     "i": acrossClueCount - len(acrossClues),
-                    "direction": "across",
+                    "d": "across",
                     "prompt": prompt,
                     "answer": answer
                 })
@@ -319,7 +319,7 @@ def _parse_puzzle_file(text):
                     "x": i,
                     "y": j,
                     "i": downClueCount - len(downClues),
-                    "direction": "down",
+                    "d": "down",
                     "prompt": prompt,
                     "answer": answer
                 })
