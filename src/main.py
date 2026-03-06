@@ -17,6 +17,7 @@ from info import info
 from fetcher import fetch
 from methods import methods
 from schemas import REQUEST_SCHEMA,RESPONSE_SCHEMA
+from constants import API_VERSION
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -42,33 +43,34 @@ def read_stdin_as_json():
 
 
 def processRequest(request):
-    match request["Type"]:
-        case "Fetch":
-            # try:
-            #     return fetch(request["body"])
-            # except FetchError as fe:
-            #     # In the future, depending on the Plugin Spec, I may want to 
-            #     # inspect the specific error to communicate the issue back
-            #     # to the client. Ex. Args errors
-            #     return generateErrorResponse("FetchFailed", fe.message)
+    match request["type"]:
+        case "fetch":
+            try:
+                return fetch(request["fetch"])
+            except FetchError as fe:
+                return generateErrorResponse("fetchFailed", fe.message)
             exit(0)
-        case "Methods":
+        case "methods":
             return methods()
-        case "Info":
+        case "info":
             return info()
 
 
 def generateErrorResponse(code, errorMessage):
     logging.info("building error response")
+
     response = {
+        "type": "error",
+        "apiVersion": API_VERSION,
         "error": {
-            "code": code,
+            "type": code,
             "errorMessage": errorMessage
-        },
-        "success": False,
+        }
     }
+
     logging.info("error response built")
     logging.info(response)
+
     return response
 
 

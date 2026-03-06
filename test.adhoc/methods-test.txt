@@ -1,4 +1,4 @@
   {
-    "APIVersion" : "v1",
-    "Type" : "Methods"
+    "apiVersion" : "v1",
+    "type" : "methods"
   }

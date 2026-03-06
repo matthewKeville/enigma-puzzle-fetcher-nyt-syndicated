@@ -3,3 +3,4 @@ test_input.json
 venv/
 .venv
 log.log
+build/

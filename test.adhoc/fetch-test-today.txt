@@ -1,0 +1,8 @@
+  {
+    "apiVersion": "v1",
+    "type": "fetch",
+    "fetch": {
+      "method": "today",
+      "args": []
+    }
+  }

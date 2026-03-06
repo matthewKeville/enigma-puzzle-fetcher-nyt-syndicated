@@ -11,7 +11,7 @@ from exceptions import (
     FetchParsingError,
     FetchUnsupportedError,
 )
-from constants import DATE_MINIMUM, PLUGIN_NAME, VERSION
+from constants import DATE_MINIMUM, PLUGIN_NAME, VERSION, API_VERSION
 
 from exceptions import logAndRaise
 
@@ -61,12 +61,12 @@ def fetch_method(name: str, description: str, arguments: dict):
     return decorator
 
 
-def fetch(fetch_request_body):
+def fetch(fetch_request):
     """
     Args:
-        fetch-request-body (dictionary) : Compliant to scheams/fetch-request-body-schema.json
+        fetchRequest
     Returns:
-        fetch-response-body-schema (dictionary)  : Compliant to schemas/fetch-response-body-schema.json
+        fetchResponse
     Raises:
         UnimplementedError,
         FetchError,
@@ -75,24 +75,20 @@ def fetch(fetch_request_body):
         FetchParsingError,
         FetchUnsupportedError,
     """
-    logging.debug("in fetch")  # REMOVE ME
-    method = fetch_request_body["method"]
-    puzzle_data = None
+    method = fetch_request["method"]
+    fetchResponse = None
     match method:
         case "date":
-            puzzle_data = _fetch_by_date(*fetch_request_body["args"])
+            fetchResponse = _fetch_by_date(*fetch_request["args"])
         case "today":
-            puzzle_data = _fetch_by_today(*fetch_request_body["args"])
+            fetchResponse = _fetch_by_today(*fetch_request["args"])
         case _:
             logAndRaise(FetchMethodError,
                         f" fetch method {method} is invalid")
-
     response = {
-        "body": {
-            "puzzleData": puzzle_data
-        },
-        "responseType": "fetch",
-        "success": True,
+        "type": "fetch",
+        "apiVersion": API_VERSION,
+        "fetch": fetchResponse
     }
     return response
 
@@ -117,7 +113,7 @@ def _fetch_by_date(dateString):
     Args:
         dateString (string) : the target crossword release date "%Y/%m/%d"
     Returns:
-        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
+        fetchResponse
     Raises:
         FetchArgsError,
         FetchNetworkError,
@@ -138,8 +134,8 @@ def _fetch_by_date(dateString):
         logAndRaise(FetchArgsError, f"date {date} exceeds current date")
 
     text = _get_puzzle_by_date(date)
-    installData = _parse_puzzle_file(text)
-    return json.dumps(installData)
+    fetchResponse = _parse_puzzle_file(text)
+    return fetchResponse
 
 
 @fetch_method(
@@ -155,8 +151,8 @@ def _fetch_by_today():
         FetchNetworkError,
     """
     text = _get_puzzle_by_date(datetime.date.today())
-    installData = _parse_puzzle_file(text)
-    return json.dumps(installData)
+    fetchResponse = _parse_puzzle_file(text)
+    return fetchResponse
 
 
 def _get_puzzle_by_date(date):
@@ -164,7 +160,7 @@ def _get_puzzle_by_date(date):
     Args:
         text (string) : text from file retrieved from nytsyn.pzzl.com endpoint
     Returns:
-        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
+        raw puzzle date
     Raises:
         FetchNetworkError:
     """
@@ -185,7 +181,7 @@ def _parse_puzzle_file(text):
     Args:
         text (string) : text from file retrieved from nytsyn.pzzl.com endpoint
     Returns:
-        puzzle-data (dictionary)  : Compliant to schemas/puzzle-data-schema.json
+        fetchResponse
     Raises:
         FetchParsingError:
         FetchUnsupportedError:
@@ -305,7 +301,7 @@ def _parse_puzzle_file(text):
                     "x": i,
                     "y": j,
                     "i": acrossClueCount - len(acrossClues),
-                    "direction": "Across",
+                    "direction": "across",
                     "prompt": prompt,
                     "answer": answer
                 })
@@ -323,12 +319,12 @@ def _parse_puzzle_file(text):
                     "x": i,
                     "y": j,
                     "i": downClueCount - len(downClues),
-                    "direction": "Down",
+                    "direction": "down",
                     "prompt": prompt,
                     "answer": answer
                 })
 
-    puzzleData = {
+    fetchResponse = {
         "meta": {
             "plugin": PLUGIN_NAME,
             "pluginVersion": VERSION,
@@ -342,4 +338,4 @@ def _parse_puzzle_file(text):
         "releaseDate": str(releaseDate.date())
     }
 
-    return puzzleData
+    return fetchResponse
