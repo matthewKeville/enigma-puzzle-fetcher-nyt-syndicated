@@ -5,7 +5,7 @@ def info():
     response = {
         "type": "info",
         "apiVersion": API_VERSION,
-        "fetch": {
+        "info": {
             "name": "nyt syndicated fetcher",
             "description": "fetches NYT syndicated puzzles through webscraping the SeattleTimes",
             "version": VERSION
